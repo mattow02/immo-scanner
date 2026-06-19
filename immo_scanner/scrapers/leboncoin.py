@@ -1,89 +1,96 @@
-import re
-import json
 import logging
+from curl_cffi import requests as cffi_requests
 from immo_scanner.models import Property, SearchCriteria
 from immo_scanner.scrapers.base import BaseScraper
+from immo_scanner.utils.geo import get_department
 
 logger = logging.getLogger(__name__)
 
+TYPE_MAP = {"apartment": "1", "house": "2", "building": "6"}
+
 
 class LeBonCoinScraper(BaseScraper):
+    needs_browser = False
     name = "leboncoin"
-    base_url = "https://www.leboncoin.fr"
-
-    def _build_url(self, criteria: SearchCriteria, page: int) -> str:
-        city = criteria.cities[0] if criteria.cities else ""
-        from immo_scanner.utils.geo import get_postal_code
-        postal = get_postal_code(city) or ""
-
-        url = f"{self.base_url}/recherche?category=9"
-        if city:
-            url += f"&locations={city}__{postal}"
-        if criteria.budget_min or criteria.budget_max:
-            pmin = criteria.budget_min or 0
-            pmax = criteria.budget_max or 999999999
-            url += f"&price={pmin}-{pmax}"
-        if criteria.surface_min:
-            url += f"&square={criteria.surface_min}-max"
-        if page > 1:
-            url += f"&page={page}"
-        return url
+    base_url = "https://api.leboncoin.fr/finder/search"
 
     def _search_page(self, criteria: SearchCriteria, page: int) -> list[Property]:
-        url = self._build_url(criteria, page)
-        pw_page = self.browser.new_page(url)
-        if not pw_page:
-            return []
+        filters = {"category": {"id": "9"}}
+
+        ranges = {}
+        if criteria.budget_min or criteria.budget_max:
+            price_range = {}
+            if criteria.budget_min:
+                price_range["min"] = criteria.budget_min
+            if criteria.budget_max:
+                price_range["max"] = criteria.budget_max
+            ranges["price"] = price_range
+        if criteria.surface_min or criteria.surface_max:
+            sq = {}
+            if criteria.surface_min:
+                sq["min"] = criteria.surface_min
+            if criteria.surface_max:
+                sq["max"] = criteria.surface_max
+            ranges["square"] = sq
+        if ranges:
+            filters["ranges"] = ranges
+
+        re_types = [TYPE_MAP[t] for t in criteria.property_types if t in TYPE_MAP]
+        if re_types:
+            filters["enums"] = {"real_estate_type": re_types}
+
+        if criteria.cities:
+            locations = []
+            for city in criteria.cities:
+                dept = get_department(city)
+                loc = {"city": city.capitalize(), "locationType": "city"}
+                if dept:
+                    loc["department_id"] = dept
+                locations.append(loc)
+            filters["location"] = {"locations": locations}
+        elif criteria.departments:
+            filters["location"] = {
+                "locations": [{"department_id": d, "locationType": "department"} for d in criteria.departments]
+            }
+
+        payload = {
+            "limit": 35,
+            "offset": (page - 1) * 35,
+            "filters": filters,
+        }
+
+        import time, random
+        time.sleep(random.uniform(1, 3))
 
         try:
-            import time
-            time.sleep(5)
-
-            captcha = pw_page.query_selector_all("iframe[src*='captcha'], [class*='captcha']")
-            if captcha:
-                logger.warning("[leboncoin] Captcha detected, skipping")
-                return []
-
-            script_data = pw_page.evaluate("""() => {
-                const scripts = document.querySelectorAll('script[type="application/json"], script#__NEXT_DATA__');
-                const results = [];
-                scripts.forEach(s => { if (s.textContent.length > 500) results.push(s.textContent); });
-                return results;
-            }""")
-
-            results = []
-            for raw in script_data:
-                try:
-                    data = json.loads(raw)
-                    ads = self._find_ads(data)
-                    for ad in ads:
-                        prop = self._parse_ad(ad)
-                        if prop:
-                            results.append(prop)
-                except (json.JSONDecodeError, TypeError):
-                    continue
-
-            if not results:
-                results = self._parse_html(pw_page)
-
-            return results
-        finally:
-            pw_page.close()
-
-    def _find_ads(self, data, depth=0) -> list[dict]:
-        if depth > 6:
+            resp = cffi_requests.post(
+                self.base_url,
+                json=payload,
+                headers={
+                    "api_key": "ba0c2dad52b3ec",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Origin": "https://www.leboncoin.fr",
+                    "Referer": "https://www.leboncoin.fr/",
+                },
+                impersonate="chrome",
+                timeout=15,
+            )
+        except Exception as e:
+            logger.error(f"[leboncoin] Request failed: {e}")
             return []
+
+        if resp.status_code != 200:
+            logger.warning(f"[leboncoin] HTTP {resp.status_code}")
+            return []
+
+        data = resp.json()
+        ads = data.get("ads", [])
         results = []
-        if isinstance(data, dict):
-            if "list_id" in data and "subject" in data:
-                results.append(data)
-            if "ads" in data and isinstance(data["ads"], list):
-                return data["ads"]
-            for v in data.values():
-                results.extend(self._find_ads(v, depth + 1))
-        elif isinstance(data, list):
-            for item in data:
-                results.extend(self._find_ads(item, depth + 1))
+        for ad in ads:
+            prop = self._parse_ad(ad)
+            if prop:
+                results.append(prop)
         return results
 
     def _parse_ad(self, ad: dict) -> Property | None:
@@ -96,45 +103,49 @@ class LeBonCoinScraper(BaseScraper):
             location = ad.get("location", {})
             attrs = {a.get("key", ""): a.get("value", "") for a in ad.get("attributes", [])}
 
-            surface = float(attrs.get("square", 0) or 0)
-            rooms = int(attrs.get("rooms", 0) or 0) or None
+            surface = 0.0
+            if attrs.get("square"):
+                try:
+                    surface = float(attrs["square"])
+                except (ValueError, TypeError):
+                    pass
+
+            rooms = None
+            if attrs.get("rooms"):
+                try:
+                    rooms = int(attrs["rooms"])
+                except (ValueError, TypeError):
+                    pass
+
+            from datetime import datetime
+            date_posted = None
+            if ad.get("first_publication_date"):
+                try:
+                    date_posted = datetime.fromisoformat(ad["first_publication_date"].replace("Z", "+00:00"))
+                except (ValueError, TypeError):
+                    pass
+
+            images = ad.get("images", {})
+            image_url = images.get("urls", [""])[0] if images else ""
 
             return Property(
                 title=ad.get("subject", ""),
                 price=price,
                 city=location.get("city", ""),
                 postal_code=location.get("zipcode", ""),
+                address=location.get("address", ""),
                 surface=surface,
                 rooms=rooms,
                 property_type=attrs.get("real_estate_type", ""),
-                url=ad.get("url", f"{self.base_url}/ad/ventes_immobilieres/{ad.get('list_id', '')}"),
+                description=ad.get("body", ""),
+                url=ad.get("url", f"https://www.leboncoin.fr/ad/ventes_immobilieres/{ad.get('list_id', '')}"),
                 source="leboncoin",
+                image_url=image_url,
                 dpe=attrs.get("energy_rate", ""),
                 latitude=location.get("lat"),
                 longitude=location.get("lng"),
+                date_posted=date_posted,
             )
         except Exception as e:
             logger.debug(f"[leboncoin] Parse error: {e}")
             return None
-
-    def _parse_html(self, pw_page) -> list[Property]:
-        cards = pw_page.query_selector_all("a[href*='/ad/']")
-        results = []
-        seen = set()
-        for card in cards:
-            href = card.get_attribute("href") or ""
-            if not href or href in seen or "/ad/" not in href:
-                continue
-            seen.add(href)
-            text = card.inner_text()
-            price = self._extract_price(text)
-            surface = self._extract_surface(text)
-            rooms = self._extract_rooms(text)
-            if price:
-                url = href if href.startswith("http") else f"{self.base_url}{href}"
-                results.append(Property(
-                    title=text.split("\n")[0][:80],
-                    price=price, surface=surface, rooms=rooms,
-                    city="", url=url, source="leboncoin",
-                ))
-        return results

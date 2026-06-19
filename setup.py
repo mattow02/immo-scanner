@@ -14,6 +14,7 @@ setup(
         "fake-useragent>=1.4.0",
         "playwright>=1.40.0",
         "playwright-stealth>=2.0.0",
+        "curl_cffi>=0.7.0",
     ],
     entry_points={
         "console_scripts": [

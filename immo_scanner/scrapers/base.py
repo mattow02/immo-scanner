@@ -2,7 +2,6 @@ import re
 import logging
 from abc import ABC, abstractmethod
 from immo_scanner.models import Property, SearchCriteria
-from immo_scanner.utils.browser import BrowserClient
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +9,9 @@ logger = logging.getLogger(__name__)
 class BaseScraper(ABC):
     name: str = "base"
     base_url: str = ""
+    needs_browser: bool = True
 
-    def __init__(self, browser: BrowserClient):
+    def __init__(self, browser=None):
         self.browser = browser
 
     def search(self, criteria: SearchCriteria) -> list[Property]:
@@ -66,13 +66,3 @@ class BaseScraper(ABC):
         if m:
             return int(m.group(1))
         return None
-
-    @staticmethod
-    def _extract_city_postal(text: str) -> tuple[str, str]:
-        m = re.search(r"(\d{5})\s+(.+?)(?:\s*\(|$)", text)
-        if m:
-            return m.group(2).strip(), m.group(1)
-        m = re.search(r"(.+?)\s+\(([^)]+)\)", text)
-        if m:
-            return m.group(1).strip(), ""
-        return text.strip(), ""
