@@ -68,7 +68,7 @@ class Config:
         self.rooms_max = _get_int("IMMO_ROOMS_MAX", 0) or None
         self.rental_mode = _get("IMMO_RENTAL_MODE", "both")
         self.min_yield = _get_float("IMMO_MIN_YIELD", 5.0)
-        self.sites = _get_list("IMMO_SITES", "leboncoin,seloger,pap,bienici,logicimmo,paruvendu,figaro,ouestfrance")
+        self.sites = _get_list("IMMO_SITES", "leboncoin,seloger,bienici,laforet,orpi,figaro,pap")
         self.max_pages = _get_int("IMMO_MAX_PAGES", 5)
         self.delay_min = _get_int("IMMO_DELAY_MIN", 2)
         self.delay_max = _get_int("IMMO_DELAY_MAX", 5)
