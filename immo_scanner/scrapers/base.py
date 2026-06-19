@@ -60,6 +60,14 @@ class BaseScraper(ABC):
     def _search_page(self, criteria: SearchCriteria, page: int) -> list[Property]:
         pass
 
+    EXCLUDED_KEYWORDS = re.compile(
+        r"viager|r[ée]sidence\s+senior|r[ée]sidence\s+g[ée]r[ée]e|ehpad|"
+        r"lmnp\s+g[ée]r[ée]|r[ée]sidence\s+[ée]tudiante|r[ée]sidence\s+service|"
+        r"bail\s+commercial|droit\s+au\s+bail|murs\s+commerc|"
+        r"bouquet|rente\s+viag[èe]re|occup[ée]\s+[àa]\s+vie",
+        re.IGNORECASE,
+    )
+
     def _filter_result(self, prop: Property, criteria: SearchCriteria) -> bool:
         if criteria.budget_min and prop.price < criteria.budget_min:
             return False
@@ -68,6 +76,10 @@ class BaseScraper(ABC):
         if criteria.surface_min and prop.surface and prop.surface < criteria.surface_min:
             return False
         if criteria.surface_max and prop.surface and prop.surface > criteria.surface_max:
+            return False
+        searchable = f"{prop.title} {prop.description}"
+        if self.EXCLUDED_KEYWORDS.search(searchable):
+            logger.debug(f"[{self.name}] Exclu (viager/residence geree): {prop.title[:60]}")
             return False
         return True
 
