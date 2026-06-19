@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="immo-scanner",
-    version="1.0.0",
+    version="1.1.0",
     packages=find_packages(),
     install_requires=[
         "requests>=2.31.0",
@@ -12,7 +12,8 @@ setup(
         "rich>=13.0.0",
         "click>=8.1.0",
         "fake-useragent>=1.4.0",
-        "cloudscraper>=1.2.71",
+        "playwright>=1.40.0",
+        "playwright-stealth>=2.0.0",
     ],
     entry_points={
         "console_scripts": [

@@ -2,101 +2,60 @@ import re
 import logging
 from immo_scanner.models import Property, SearchCriteria
 from immo_scanner.scrapers.base import BaseScraper
-from immo_scanner.utils.geo import normalize_city
 
 logger = logging.getLogger(__name__)
-
-TYPE_MAP = {"apartment": "appartement", "house": "maison", "building": "immeuble"}
-TRANSACTION_MAP = {"buy": "vente", "rent": "location"}
 
 
 class PapScraper(BaseScraper):
     name = "pap"
-    base_url = "https://www.pap.fr/annonce"
+    base_url = "https://www.pap.fr"
 
     def _search_page(self, criteria: SearchCriteria, page: int) -> list[Property]:
-        transaction = TRANSACTION_MAP.get(criteria.transaction_type, "vente")
-        types_path = "-".join(TYPE_MAP.get(t, "appartement") for t in criteria.property_types)
+        city = criteria.cities[0].lower() if criteria.cities else ""
+        from immo_scanner.utils.geo import get_department
+        dept = get_department(city) if city else ""
 
-        city_part = ""
-        if criteria.cities:
-            city_part = "-".join(normalize_city(c) for c in criteria.cities)
-        else:
-            city_part = "france"
-
-        url = f"{self.base_url}/{transaction}-{types_path}-{city_part}"
-
+        url = f"{self.base_url}/annonce/vente-appartement-maison-{city}-{dept}"
         params = {"page": str(page)}
-        if criteria.budget_min:
-            params["prix-min"] = str(criteria.budget_min)
         if criteria.budget_max:
             params["prix-max"] = str(criteria.budget_max)
-        if criteria.surface_min:
-            params["surface-min"] = str(criteria.surface_min)
-        if criteria.surface_max:
-            params["surface-max"] = str(criteria.surface_max)
+        if criteria.budget_min:
+            params["prix-min"] = str(criteria.budget_min)
 
-        resp = self.client.get(url, params=params)
-        if not resp:
+        param_str = "&".join(f"{k}={v}" for k, v in params.items())
+        full_url = f"{url}?{param_str}"
+
+        pw_page = self.browser.new_page(full_url)
+        if not pw_page:
             return []
 
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(resp.text, "lxml")
-        cards = soup.select(".search-list-item, .search-results-item, [class*='adListItem']")
-
-        results = []
-        for card in cards:
-            prop = self._parse_card(card)
-            if prop and self._filter_result(prop, criteria):
-                results.append(prop)
-        return results
-
-    def _parse_card(self, card) -> Property | None:
         try:
-            title_el = card.select_one("h2, .item-title, [class*='title'] a")
-            title = title_el.get_text(strip=True) if title_el else ""
+            import time
+            time.sleep(3)
 
-            link_el = card.select_one("a[href*='annonce']")
-            url = ""
-            if link_el and link_el.get("href"):
-                href = link_el["href"]
-                url = href if href.startswith("http") else f"https://www.pap.fr{href}"
+            captcha = pw_page.query_selector_all("iframe[src*='captcha'], [class*='captcha']")
+            if captcha:
+                logger.warning("[pap] Captcha detected, skipping")
+                return []
 
-            price_el = card.select_one(".item-price, [class*='price']")
-            price = 0
-            if price_el:
-                price_text = re.sub(r"[^\d]", "", price_el.get_text())
-                if price_text:
-                    price = int(price_text)
+            cards = pw_page.query_selector_all("[class*='search-list-item'], [class*='item-listing'], a[href*='annonces']")
+            results = []
+            for card in cards:
+                text = card.inner_text()
+                price = self._extract_price(text)
+                surface = self._extract_surface(text)
+                rooms = self._extract_rooms(text)
 
-            city_el = card.select_one(".item-description em, .item-city, [class*='city']")
-            city = ""
-            if city_el:
-                city_text = city_el.get_text(strip=True)
-                city = re.sub(r"\(\d+\)", "", city_text).strip()
+                link = card if card.evaluate("el => el.tagName") == "A" else card.query_selector("a[href]")
+                href = link.get_attribute("href") if link else ""
+                full_url = href if href and href.startswith("http") else f"{self.base_url}{href}" if href else ""
 
-            surface = 0.0
-            rooms = None
-            tags_el = card.select(".item-tags li, .item-criteria span, [class*='Tag']")
-            for tag in tags_el:
-                text = tag.get_text(strip=True).lower()
-                m = re.search(r"(\d+[.,]?\d*)\s*m", text)
-                if m:
-                    surface = float(m.group(1).replace(",", "."))
-                m = re.search(r"(\d+)\s*p", text)
-                if m:
-                    rooms = int(m.group(1))
-
-            if not price:
-                return None
-
-            return Property(
-                title=title, price=price, city=city, surface=surface,
-                rooms=rooms, url=url, source="pap",
-            )
-        except Exception as e:
-            logger.debug(f"[pap] Parse error: {e}")
-            return None
-
-    def _parse_listing(self, raw: dict) -> Property | None:
-        return None
+                if price:
+                    results.append(Property(
+                        title=text.split("\n")[0][:80],
+                        price=price, surface=surface, rooms=rooms,
+                        city="", url=full_url, source="pap",
+                    ))
+            return results
+        finally:
+            pw_page.close()

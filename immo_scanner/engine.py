@@ -6,6 +6,7 @@ from immo_scanner.dedup import deduplicate
 from immo_scanner.scorer import score_properties
 from immo_scanner.export import export_excel
 from immo_scanner.display import show_results, show_stats, show_config, create_progress, console
+from immo_scanner.utils.browser import BrowserClient
 
 logger = logging.getLogger(__name__)
 
@@ -20,34 +21,29 @@ class Engine:
         sites = self.config.sites
         all_properties: list[Property] = []
 
-        console.print(f"[bold]Scan de {len(sites)} sites...[/bold]\n")
+        console.print(f"[bold]Lancement du navigateur et scan de {len(sites)} sites...[/bold]\n")
 
-        with create_progress() as progress:
-            task = progress.add_task("Scraping en cours", total=len(sites))
+        with BrowserClient(headless=True, delay_min=self.config.delay_min, delay_max=self.config.delay_max) as browser:
+            with create_progress() as progress:
+                task = progress.add_task("Scraping en cours", total=len(sites))
 
-            for site_name in sites:
-                progress.update(task, description=f"[cyan]{site_name}[/cyan]")
-                scraper = get_scraper(
-                    site_name,
-                    delay_min=self.config.delay_min,
-                    delay_max=self.config.delay_max,
-                    timeout=self.config.timeout,
-                    proxy=self.config.proxy,
-                )
-                if not scraper:
-                    logger.warning(f"Scraper inconnu: {site_name}")
+                for site_name in sites:
+                    progress.update(task, description=f"[cyan]{site_name}[/cyan]")
+                    scraper = get_scraper(site_name, browser=browser)
+                    if not scraper:
+                        logger.warning(f"Scraper inconnu: {site_name}")
+                        progress.advance(task)
+                        continue
+
+                    try:
+                        props = scraper.search(criteria)
+                        all_properties.extend(props)
+                        console.print(f"  [green]✓[/green] {site_name}: {len(props)} annonces")
+                    except Exception as e:
+                        console.print(f"  [red]✗[/red] {site_name}: {e}")
+                        logger.error(f"Erreur scraper {site_name}: {e}")
+
                     progress.advance(task)
-                    continue
-
-                try:
-                    props = scraper.search(criteria)
-                    all_properties.extend(props)
-                    console.print(f"  [green]✓[/green] {site_name}: {len(props)} annonces")
-                except Exception as e:
-                    console.print(f"  [red]✗[/red] {site_name}: {e}")
-                    logger.error(f"Erreur scraper {site_name}: {e}")
-
-                progress.advance(task)
 
         console.print(f"\n[bold]{len(all_properties)} annonces récupérées au total[/bold]")
 
