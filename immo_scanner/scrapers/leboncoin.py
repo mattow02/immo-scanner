@@ -11,6 +11,7 @@ TYPE_MAP = {"apartment": "1", "house": "2", "building": "6"}
 
 class LeBonCoinScraper(BaseScraper):
     needs_browser = False
+    supports_multi_city = False
     name = "leboncoin"
     base_url = "https://api.leboncoin.fr/finder/search"
 

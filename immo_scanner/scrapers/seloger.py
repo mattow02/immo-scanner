@@ -39,6 +39,7 @@ TYPE_MAP = {"apartment": "1", "house": "2", "building": "12"}
 
 class SeLogerScraper(BaseScraper):
     needs_browser = False
+    supports_multi_city = True
     name = "seloger"
     base_url = "https://www.seloger.com/list.htm"
 

@@ -10,11 +10,37 @@ class BaseScraper(ABC):
     name: str = "base"
     base_url: str = ""
     needs_browser: bool = True
+    supports_multi_city: bool = False
 
     def __init__(self, browser=None):
         self.browser = browser
 
     def search(self, criteria: SearchCriteria) -> list[Property]:
+        if self.supports_multi_city or len(criteria.cities) <= 1:
+            return self._search_criteria(criteria)
+
+        all_properties = []
+        for city in criteria.cities:
+            city_criteria = SearchCriteria(
+                cities=[city],
+                departments=criteria.departments,
+                radius_km=criteria.radius_km,
+                budget_min=criteria.budget_min,
+                budget_max=criteria.budget_max,
+                surface_min=criteria.surface_min,
+                surface_max=criteria.surface_max,
+                property_types=criteria.property_types,
+                rooms_min=criteria.rooms_min,
+                rooms_max=criteria.rooms_max,
+                max_pages=criteria.max_pages,
+                transaction_type=criteria.transaction_type,
+            )
+            props = self._search_criteria(city_criteria)
+            all_properties.extend(props)
+            logger.info(f"[{self.name}] {city}: {len(props)} annonces")
+        return all_properties
+
+    def _search_criteria(self, criteria: SearchCriteria) -> list[Property]:
         all_properties = []
         for page_num in range(1, criteria.max_pages + 1):
             try:
