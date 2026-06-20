@@ -6,9 +6,11 @@ from immo_scanner.dedup import deduplicate
 from immo_scanner.scorer import score_properties
 from immo_scanner.export import export_excel
 from immo_scanner.display import show_results, show_stats, show_config, create_progress, console
-from immo_scanner.utils.browser import BrowserClient
+from immo_scanner.utils.browser import PLAYWRIGHT_AVAILABLE
 
 logger = logging.getLogger(__name__)
+
+BROWSER_SITES = {"laforet", "orpi", "figaro", "bienici"}
 
 
 class Engine:
@@ -19,43 +21,60 @@ class Engine:
         show_config(self.config.summary())
 
         sites = self.config.sites
+        needs_browser = any(s in BROWSER_SITES for s in sites)
         all_properties: list[Property] = []
 
-        console.print(f"[bold]Lancement du navigateur et scan de {len(sites)} sites...[/bold]\n")
+        browser = None
+        browser_ctx = None
+        if needs_browser and PLAYWRIGHT_AVAILABLE:
+            from immo_scanner.utils.browser import BrowserClient
+            browser_ctx = BrowserClient(headless=True, delay_min=self.config.delay_min, delay_max=self.config.delay_max)
+            browser = browser_ctx.start()
 
-        with BrowserClient(headless=True, delay_min=self.config.delay_min, delay_max=self.config.delay_max) as browser:
+        try:
+            console.print(f"[bold]Scanning {len(sites)} sites...[/bold]\n")
+
             with create_progress() as progress:
-                task = progress.add_task("Scraping en cours", total=len(sites))
+                task = progress.add_task("Scraping", total=len(sites))
 
                 for site_name in sites:
                     progress.update(task, description=f"[cyan]{site_name}[/cyan]")
+
+                    if site_name in BROWSER_SITES and not PLAYWRIGHT_AVAILABLE:
+                        console.print(f"  [yellow]⊘[/yellow] {site_name}: [dim]skipped (Playwright not installed)[/dim]")
+                        progress.advance(task)
+                        continue
+
                     scraper = get_scraper(site_name, browser=browser)
                     if not scraper:
-                        logger.warning(f"Scraper inconnu: {site_name}")
+                        logger.warning(f"Unknown scraper: {site_name}")
                         progress.advance(task)
                         continue
 
                     try:
                         props = scraper.search(criteria)
                         all_properties.extend(props)
-                        console.print(f"  [green]✓[/green] {site_name}: {len(props)} annonces")
+                        console.print(f"  [green]✓[/green] {site_name}: {len(props)} listings")
                     except Exception as e:
                         console.print(f"  [red]✗[/red] {site_name}: {e}")
-                        logger.error(f"Erreur scraper {site_name}: {e}")
+                        logger.error(f"Scraper error {site_name}: {e}")
 
                     progress.advance(task)
+        finally:
+            if browser_ctx:
+                browser_ctx.stop()
 
-        console.print(f"\n[bold]{len(all_properties)} annonces récupérées au total[/bold]")
+        console.print(f"\n[bold]{len(all_properties)} listings fetched[/bold]")
 
-        console.print("[dim]Déduplication...[/dim]")
+        console.print("[dim]Deduplicating...[/dim]")
         unique = deduplicate(all_properties)
-        console.print(f"[bold]{len(unique)} biens uniques après déduplication[/bold]\n")
+        console.print(f"[bold]{len(unique)} unique properties[/bold]\n")
 
-        console.print("[dim]Calcul des scores et rendements...[/dim]")
+        console.print("[dim]Scoring & yield calculation...[/dim]")
         scored = score_properties(unique, self.config.rental_mode)
 
         filtered = [s for s in scored if s.gross_yield >= self.config.min_yield]
-        console.print(f"[bold]{len(filtered)} biens avec rendement >= {self.config.min_yield}%[/bold]\n")
+        console.print(f"[bold]{len(filtered)} properties with yield >= {self.config.min_yield}%[/bold]\n")
 
         show_results(scored, min_yield=self.config.min_yield)
         console.print()
@@ -64,6 +83,6 @@ class Engine:
         if not no_excel and filtered:
             output_dir = output or self.config.output_dir
             filepath = export_excel(filtered, output_dir, self.config.excel_name)
-            console.print(f"\n[bold green]Excel exporté :[/bold green] {filepath}")
+            console.print(f"\n[bold green]Excel exported:[/bold green] {filepath}")
 
         return scored

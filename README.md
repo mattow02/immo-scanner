@@ -13,6 +13,38 @@ Scans 7 major listing sites, estimates rental yield, scores each property, and e
 
 ---
 
+## Download
+
+**Pre-built executables** — no Python installation needed:
+
+| Platform | Download |
+|----------|----------|
+| **Windows** | [`immo-scanner-windows.exe`](https://github.com/mattow02/immo-scanner/releases/latest) |
+| **Linux** | [`immo-scanner-linux`](https://github.com/mattow02/immo-scanner/releases/latest) |
+
+### Windows Quick Start
+
+1. Download `immo-scanner-windows.exe` from [Releases](https://github.com/mattow02/immo-scanner/releases/latest)
+2. Create a `.env` file in the same folder (copy from [`.env.example`](.env.example))
+3. Open a terminal in that folder and run:
+   ```
+   immo-scanner-windows.exe
+   ```
+4. Follow the interactive prompts
+
+### Linux Quick Start
+
+```bash
+# Download
+curl -LO https://github.com/mattow02/immo-scanner/releases/latest/download/immo-scanner-linux
+chmod +x immo-scanner-linux
+./immo-scanner-linux
+```
+
+> **Note:** The standalone executables include LeBonCoin, SeLoger, Bien'ici, and PAP scrapers. For browser-based scrapers (Laforet, Orpi, Figaro), install the Python version with Playwright (see below).
+
+---
+
 ## Features
 
 - **7 listing sites** — LeBonCoin, SeLoger, Bien'ici, Laforet, Orpi, Figaro Immo, PAP

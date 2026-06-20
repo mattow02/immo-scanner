@@ -1,28 +1,39 @@
 import os
+import sys
 from pathlib import Path
 from immo_scanner.models import SearchCriteria
 
 _ENV_LOADED = False
 
 
+def _get_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path.cwd()
+
+
 def _load_env():
     global _ENV_LOADED
     if _ENV_LOADED:
         return
-    env_path = Path(".env")
-    if not env_path.exists():
-        env_path = Path(__file__).parent.parent / ".env"
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if "=" in line:
-                key, _, value = line.partition("=")
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                if key not in os.environ:
-                    os.environ[key] = value
+    candidates = [
+        Path.cwd() / ".env",
+        _get_base_dir() / ".env",
+        Path(__file__).parent.parent / ".env",
+    ]
+    for env_path in candidates:
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key not in os.environ:
+                        os.environ[key] = value
+            break
     _ENV_LOADED = True
 
 
@@ -95,13 +106,13 @@ class Config:
 
     def summary(self) -> dict:
         return {
-            "Villes": ", ".join(self.cities) or "(toutes)",
-            "Departements": ", ".join(self.departments) or "(non defini)",
+            "Cities": ", ".join(self.cities) or "(all)",
+            "Departments": ", ".join(self.departments) or "(not set)",
             "Budget": f"{self.budget_min:,} - {self.budget_max:,} EUR",
             "Surface": f"{self.surface_min}+ m2" + (f" (max {self.surface_max} m2)" if self.surface_max else ""),
             "Types": ", ".join(self.property_types),
-            "Rendement min": f"{self.min_yield}%",
-            "Mode loyer": self.rental_mode,
+            "Min yield": f"{self.min_yield}%",
+            "Rental mode": self.rental_mode,
             "Sites": ", ".join(self.sites),
-            "Pages max/site": str(self.max_pages),
+            "Max pages/site": str(self.max_pages),
         }

@@ -1,16 +1,26 @@
 import logging
 import time
 import random
-from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
-from playwright_stealth import Stealth
 
 logger = logging.getLogger(__name__)
 
-_stealth = Stealth()
+PLAYWRIGHT_AVAILABLE = False
+
+try:
+    from playwright.sync_api import sync_playwright, Page
+    from playwright_stealth import Stealth
+    _stealth = Stealth()
+    PLAYWRIGHT_AVAILABLE = True
+except Exception:
+    sync_playwright = None
+    Page = None
+    _stealth = None
 
 
 class BrowserClient:
     def __init__(self, headless=True, delay_min=2, delay_max=4):
+        if not PLAYWRIGHT_AVAILABLE:
+            raise RuntimeError("Playwright is not installed. Install it with: pip install playwright playwright-stealth && playwright install chromium")
         self.headless = headless
         self.delay_min = delay_min
         self.delay_max = delay_max
@@ -49,7 +59,7 @@ class BrowserClient:
     def _wait(self):
         time.sleep(random.uniform(self.delay_min, self.delay_max))
 
-    def new_page(self, url: str, wait_for: str | None = None, timeout: int = 30000) -> Page | None:
+    def new_page(self, url, wait_for=None, timeout=30000):
         self._wait()
         page = self._ctx.new_page()
         _stealth.apply_stealth_sync(page)
@@ -68,7 +78,7 @@ class BrowserClient:
             page.close()
             return None
 
-    def _dismiss_cookies(self, page: Page):
+    def _dismiss_cookies(self, page):
         for selector in [
             "button:has-text('Continuer sans accepter')",
             "button:has-text('Tout refuser')",
