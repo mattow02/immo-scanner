@@ -1,5 +1,7 @@
 <div align="center">
 
+**[English](#)** | **[Francais](README.fr.md)**
+
 # Immo-Scanner
 
 **Find the best rental investment properties across France's top real estate platforms.**
@@ -15,6 +17,7 @@ Scans 7 major listing sites, estimates rental yield, scores each property, and e
 
 ## Table of Contents
 
+- [Prerequisites](#prerequisites)
 - [Windows Setup](#windows-setup)
 - [Linux Setup](#linux-setup)
 - [How It Works](#how-it-works)
@@ -28,37 +31,79 @@ Scans 7 major listing sites, estimates rental yield, scores each property, and e
 
 ---
 
+## Prerequisites
+
+### Install Python (required for all setups except pre-built binary)
+
+<details>
+<summary><strong>Windows — Step by step</strong></summary>
+
+1. Go to **https://www.python.org/downloads/**
+2. Click the big yellow **"Download Python 3.12.x"** button
+3. Run the installer
+4. **IMPORTANT: Check the box "Add Python to PATH"** at the bottom of the first screen
+5. Click **"Install Now"**
+6. When done, open a terminal (press `Win + R`, type `cmd`, press Enter) and verify:
+   ```
+   python --version
+   ```
+   You should see `Python 3.12.x`. If you see an error, restart your computer and try again.
+
+</details>
+
+<details>
+<summary><strong>Linux (Ubuntu/Debian)</strong></summary>
+
+```bash
+sudo apt update
+sudo apt install python3 python3-venv python3-pip git
+python3 --version  # should show 3.12+
+```
+
+</details>
+
+<details>
+<summary><strong>macOS</strong></summary>
+
+```bash
+brew install python@3.12 git
+python3 --version
+```
+
+</details>
+
+---
+
 ## Windows Setup
 
 ### Option 1: One-click run (recommended)
 
-> Requires [Python 3.12+](https://www.python.org/downloads/) installed with **"Add Python to PATH"** checked.
+1. **Download the project:**
+   - Click the green **"Code"** button at the top of this page
+   - Click **"Download ZIP"**
+   - Extract the ZIP somewhere (e.g. your Desktop)
 
-1. **Download or clone** the project:
+   Or if you have Git:
    ```
    git clone https://github.com/mattow02/immo-scanner.git
    ```
-   Or download as ZIP from the green **Code** button above, and extract it.
 
-2. **Double-click `setup-and-run.bat`** in the project folder.
-   - First run: installs everything automatically, opens `.env` in Notepad for you to configure
+2. **Open the extracted folder** and **double-click `setup-and-run.bat`**
+   - First run: installs everything, opens `.env` in Notepad for you to configure
    - Next runs: launches the interactive scanner directly
 
-3. **Follow the prompts** — pick your cities, budget, sites, and go.
+3. **Follow the prompts** — pick cities, budget, sites, done.
 
-That's it. The Excel report will be saved in the `output/` folder.
+The Excel report is saved in the `output/` folder.
 
 ### Option 2: Build a standalone `.exe`
 
-If you want a single executable that works without Python:
+If you want a portable executable that works without Python:
 
-1. Install [Python 3.12+](https://www.python.org/downloads/) (check **"Add Python to PATH"**)
-2. **Double-click `build-windows.bat`**
+1. **Double-click `build-windows.bat`**
+2. Wait for the build to finish (~2 minutes)
 3. Your executable is at `dist\immo-scanner.exe`
-4. Copy `immo-scanner.exe` + `.env` wherever you want and run it:
-   ```
-   immo-scanner.exe
-   ```
+4. Copy `immo-scanner.exe` + your `.env` file anywhere and run it
 
 ### Option 3: Manual install (PowerShell / CMD)
 
@@ -94,16 +139,13 @@ immo-scanner
 ### Option 1: Pre-built binary
 
 ```bash
-# Download from releases
 curl -LO https://github.com/mattow02/immo-scanner/releases/latest/download/immo-scanner-linux
 chmod +x immo-scanner-linux
 
-# Create config
 curl -LO https://raw.githubusercontent.com/mattow02/immo-scanner/main/.env.example
 mv .env.example .env
-nano .env  # edit your preferences
+nano .env
 
-# Run
 ./immo-scanner-linux
 ```
 
@@ -126,7 +168,7 @@ immo-scanner
 
 ### Optional: enable browser-based scrapers
 
-LeBonCoin and SeLoger work out of the box. For Laforet, Orpi, and Figaro (browser-based), also run:
+LeBonCoin and SeLoger work out of the box. For Laforet, Orpi, and Figaro, also run:
 
 ```bash
 pip install playwright playwright-stealth
@@ -151,7 +193,7 @@ playwright install chromium
   - Viager (life annuities)
   - Managed residences / EHPAD
   - Caves, parkings, garages
-  - Suspicious price/m² anomalies
+  - Suspicious price/m2 anomalies
   - Duplicates across sites
 ```
 
@@ -161,7 +203,7 @@ playwright install chromium
 
 ### Interactive mode (default)
 
-Just run `immo-scanner` with no arguments. A step-by-step wizard guides you through:
+Run `immo-scanner` with no arguments:
 
 ```
 Step 1/6 — Target cities
@@ -174,22 +216,11 @@ Step 6/6 — Summary → Start scan? [Y/n]
 
 ### Command-line mode
 
-For scripting or quick runs, use flags directly:
-
 ```bash
-# Single city
 immo-scanner scan --city Lyon --budget-max 150000 --min-yield 7
-
-# Multiple cities
 immo-scanner scan --city Paris --city Marseille --city Bordeaux
-
-# Specific site, no Excel
-immo-scanner scan --sites leboncoin --city Strasbourg --max-pages 3 --no-excel
-
-# Show config
+immo-scanner scan --sites leboncoin --city Strasbourg --no-excel
 immo-scanner config
-
-# List available sites
 immo-scanner sites
 ```
 
@@ -216,29 +247,19 @@ immo-scanner sites
 
 ## Configuration
 
-All settings live in a `.env` file. Copy `.env.example` to `.env` and edit:
+Copy `.env.example` to `.env` and edit:
 
 ```env
-# === SEARCH ===
 IMMO_CITIES=Lyon,Marseille,Bordeaux      # Target cities
 IMMO_BUDGET_MIN=30000                     # Min price (EUR)
 IMMO_BUDGET_MAX=200000                    # Max price (EUR)
 IMMO_SURFACE_MIN=15                       # Min area (m2)
 IMMO_TYPES=apartment,house,building       # Property types
-
-# === YIELD ===
 IMMO_RENTAL_MODE=both                     # avg_price | cross_ref | both
 IMMO_MIN_YIELD=5.0                        # Min gross yield (%)
-
-# === SCRAPING ===
 IMMO_SITES=leboncoin,seloger              # Sites to use
 IMMO_MAX_PAGES=3                          # Pages per site per city
-IMMO_DELAY_MIN=2                          # Min delay between requests (sec)
-IMMO_DELAY_MAX=5                          # Max delay between requests (sec)
-
-# === OUTPUT ===
 IMMO_OUTPUT_DIR=./output                  # Excel output folder
-IMMO_EXCEL_NAME=resultats_immo            # Excel filename prefix
 ```
 
 ### Rental estimation modes
@@ -264,14 +285,6 @@ Each property gets a score from 0 to 100:
 | **Size coherence** | 10% | Area must match room count |
 | **Listing freshness** | 10% | Recent listings score higher |
 
-### Yield formulas
-
-```
-Gross yield = (monthly rent x 12) / purchase price x 100
-
-Net yield   = (annual rent - tax - fees - 1 month vacancy) / purchase price x 100
-```
-
 ---
 
 ## Excel Output
@@ -280,26 +293,11 @@ The `.xlsx` file has 3 tabs:
 
 | Tab | Content |
 |-----|---------|
-| **Ranking** | Properties sorted by score. Columns: rank, score, city, type, area, price, rent, yield, price/m2, link |
-| **Details** | All data: description, rooms, floor, DPE, charges, GPS coords, score breakdown |
-| **Statistics** | Summary: total count, avg/median yield, top cities, source breakdown |
+| **Ranking** | Properties sorted by score with links |
+| **Details** | Full data: description, rooms, DPE, GPS, score breakdown |
+| **Statistics** | Summary: count, avg/median yield, top cities, sources |
 
-Color coding: green (yield >= 8%), orange (5-8%), red (< 5%). All listing links are clickable.
-
----
-
-## Auto-Filtering
-
-These listings are automatically excluded:
-
-| Category | Keywords detected |
-|----------|-------------------|
-| Life annuities | viager, bouquet, rente viagere, occupe a vie |
-| Managed residences | residence senior, geree, etudiante, services |
-| Healthcare | EHPAD |
-| Commercial | bail commercial, local commercial, murs commerciaux |
-| Non-housing | caves a vendre, parking a vendre, box, garage a vendre |
-| Price anomalies | Price/m2 below 30% of city average |
+Color coding: green (yield >= 8%), orange (5-8%), red (< 5%).
 
 ---
 
@@ -315,27 +313,17 @@ These listings are automatically excluded:
 | **Figaro Immo** | Browser rendering | Yes | Working |
 | **PAP** | Browser rendering | Yes | Partial |
 
-> LeBonCoin and SeLoger work everywhere (standalone exe, Windows, Linux). The browser-based sites require Playwright to be installed separately.
-
 ---
 
 ## How Anti-Bot Bypass Works
 
-French real estate sites use **DataDome** bot protection. This tool bypasses it with two methods:
+**1. TLS Fingerprinting** (LeBonCoin, SeLoger) — `curl_cffi` impersonates Chrome's TLS handshake signature. DataDome can't tell the difference. No captcha needed.
 
-**1. TLS Fingerprinting** (LeBonCoin, SeLoger)
-
-DataDome checks the TLS handshake signature (JA3/JA4 hash). Normal Python HTTP libraries have a different fingerprint than real browsers and get blocked. `curl_cffi` impersonates Chrome's exact TLS fingerprint, making requests look identical to a real browser. No captcha needed.
-
-**2. Headless Browser** (Bien'ici, Laforet, Orpi)
-
-A real Chromium browser runs in headless mode with `playwright-stealth` patches that hide automation signals (`navigator.webdriver`, WebGL fingerprint, etc).
+**2. Headless Browser** (Bien'ici, Laforet, Orpi) — Real Chromium with `playwright-stealth` patches.
 
 ---
 
 ## Build From Source
-
-### Build the executable yourself
 
 **Linux:**
 ```bash
@@ -345,11 +333,7 @@ python build.py
 # Output: dist/immo-scanner
 ```
 
-**Windows:**
-```
-Double-click build-windows.bat
-```
-Or manually:
+**Windows:** double-click `build-windows.bat`, or:
 ```powershell
 venv\Scripts\activate
 pip install pyinstaller
@@ -357,33 +341,11 @@ python build.py
 # Output: dist\immo-scanner.exe
 ```
 
-### Project structure
-
-```
-immo-scanner/
-├── immo_scanner/
-│   ├── cli.py              # CLI + interactive wizard
-│   ├── config.py            # .env loader
-│   ├── models.py            # Data models
-│   ├── engine.py            # Main orchestrator
-│   ├── scorer.py            # Yield + scoring + anomaly filter
-│   ├── dedup.py             # Cross-site deduplication
-│   ├── display.py           # Terminal output (Rich)
-│   ├── export.py            # Excel export (openpyxl)
-│   ├── scrapers/            # One file per site
-│   └── utils/               # HTTP, browser, geo data, rent data
-├── build.py                 # PyInstaller build script
-├── build-windows.bat        # Windows build (double-click)
-├── setup-and-run.bat        # Windows quick start (double-click)
-├── .env.example             # Config template
-└── README.md
-```
-
 ---
 
 ## Disclaimer
 
-This tool is for **personal use and educational purposes only**. Scraping may violate the terms of service of some websites. Use responsibly, respect rate limits, and do not use for commercial purposes without authorization.
+This tool is for **personal use and educational purposes only**. Scraping may violate the terms of service of some websites. Use responsibly and respect rate limits.
 
 ## License
 
