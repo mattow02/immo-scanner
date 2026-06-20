@@ -133,9 +133,23 @@ def score_property(prop: Property, rental: RentalEstimate | None) -> ScoredPrope
     return scored
 
 
+def _is_suspicious(prop: Property) -> bool:
+    if not prop.surface or prop.surface <= 0 or not prop.price:
+        return False
+    price_sqm = prop.price / prop.surface
+    city_key = normalize_city(prop.city)
+    avg = AVG_PURCHASE_PRICE_SQM.get(city_key, 2500)
+    if price_sqm < avg * 0.30:
+        return True
+    return False
+
+
 def score_properties(properties: list[Property], rental_mode: str = "avg_price") -> list[ScoredProperty]:
     scored = []
     for prop in properties:
+        if _is_suspicious(prop):
+            logger.debug(f"Suspicious listing filtered: {prop.title[:50]} ({prop.price}€ for {prop.surface}m² in {prop.city})")
+            continue
         rental = estimate_rent(prop, rental_mode)
         sp = score_property(prop, rental)
         scored.append(sp)
