@@ -13,64 +13,101 @@ Scans 7 major listing sites, estimates rental yield, scores each property, and e
 
 ---
 
-## Download
+## Table of Contents
 
-**Pre-built executables** — no Python installation needed:
-
-| Platform | Download |
-|----------|----------|
-| **Windows** | [`immo-scanner-windows.exe`](https://github.com/mattow02/immo-scanner/releases/latest) |
-| **Linux** | [`immo-scanner-linux`](https://github.com/mattow02/immo-scanner/releases/latest) |
-
-### Windows Quick Start
-
-1. Download `immo-scanner-windows.exe` from [Releases](https://github.com/mattow02/immo-scanner/releases/latest)
-2. Create a `.env` file in the same folder (copy from [`.env.example`](.env.example))
-3. Open a terminal in that folder and run:
-   ```
-   immo-scanner-windows.exe
-   ```
-4. Follow the interactive prompts
-
-### Linux Quick Start
-
-```bash
-# Download
-curl -LO https://github.com/mattow02/immo-scanner/releases/latest/download/immo-scanner-linux
-chmod +x immo-scanner-linux
-./immo-scanner-linux
-```
-
-> **Note:** The standalone executables include LeBonCoin, SeLoger, Bien'ici, and PAP scrapers. For browser-based scrapers (Laforet, Orpi, Figaro), install the Python version with Playwright (see below).
+- [Windows Setup](#windows-setup)
+- [Linux Setup](#linux-setup)
+- [How It Works](#how-it-works)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Scoring System](#scoring-system)
+- [Excel Output](#excel-output)
+- [Supported Sites](#supported-sites)
+- [Anti-Bot Bypass](#how-anti-bot-bypass-works)
+- [Build From Source](#build-from-source)
 
 ---
 
-## Features
+## Windows Setup
 
-- **7 listing sites** — LeBonCoin, SeLoger, Bien'ici, Laforet, Orpi, Figaro Immo, PAP
-- **Anti-bot bypass** — TLS fingerprint impersonation via `curl_cffi` (LeBonCoin, SeLoger) + Playwright stealth for JS-heavy sites
-- **Smart scoring** — Multi-criteria scoring (0–100) based on gross yield, price/m² vs. city average, rental demand, property type, and listing freshness
-- **Dual rent estimation** — Built-in average rent database (50+ cities) or cross-reference with actual rental listings
-- **Auto-filtering** — Excludes life annuities (viager), managed residences, EHPAD, commercial leases
-- **Cross-site deduplication** — Same property listed on multiple sites? Kept once, with the most complete data
-- **Excel export** — 3-tab `.xlsx` with conditional formatting, clickable links, and statistics
-- **CLI with overrides** — Configure defaults in `.env`, override anything per-run via flags
+### Option 1: One-click run (recommended)
 
-## Supported Sites
+> Requires [Python 3.12+](https://www.python.org/downloads/) installed with **"Add Python to PATH"** checked.
 
-| Site | Method | Status |
-|------|--------|--------|
-| **LeBonCoin** | JSON API + `curl_cffi` | Fully working |
-| **SeLoger** | HTML scraping + `curl_cffi` | Fully working |
-| **Bien'ici** | Playwright (JS rendering) | Working |
-| **Laforet** | Playwright (JS rendering) | Working |
-| **Orpi** | Playwright (JS rendering) | Working |
-| **Figaro Immo** | Playwright (JS rendering) | Working |
-| **PAP** | Playwright (JS rendering) | Partial |
+1. **Download or clone** the project:
+   ```
+   git clone https://github.com/mattow02/immo-scanner.git
+   ```
+   Or download as ZIP from the green **Code** button above, and extract it.
 
-## Quick Start
+2. **Double-click `setup-and-run.bat`** in the project folder.
+   - First run: installs everything automatically, opens `.env` in Notepad for you to configure
+   - Next runs: launches the interactive scanner directly
 
-### 1. Install
+3. **Follow the prompts** — pick your cities, budget, sites, and go.
+
+That's it. The Excel report will be saved in the `output/` folder.
+
+### Option 2: Build a standalone `.exe`
+
+If you want a single executable that works without Python:
+
+1. Install [Python 3.12+](https://www.python.org/downloads/) (check **"Add Python to PATH"**)
+2. **Double-click `build-windows.bat`**
+3. Your executable is at `dist\immo-scanner.exe`
+4. Copy `immo-scanner.exe` + `.env` wherever you want and run it:
+   ```
+   immo-scanner.exe
+   ```
+
+### Option 3: Manual install (PowerShell / CMD)
+
+```powershell
+git clone https://github.com/mattow02/immo-scanner.git
+cd immo-scanner
+
+python -m venv venv
+venv\Scripts\activate
+
+pip install -e .
+
+copy .env.example .env
+notepad .env
+
+immo-scanner
+```
+
+### Windows troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `python is not recognized` | Reinstall Python, check **"Add Python to PATH"** |
+| `pip is not recognized` | Run `python -m pip install -e .` instead |
+| Red text / encoding errors | Run `chcp 65001` before launching (enables UTF-8) |
+| Excel won't open | Check the `output/` folder, file is named `resultats_immo_YYYYMMDD_HHMMSS.xlsx` |
+| `curl_cffi` install fails | Install [Visual C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
+
+---
+
+## Linux Setup
+
+### Option 1: Pre-built binary
+
+```bash
+# Download from releases
+curl -LO https://github.com/mattow02/immo-scanner/releases/latest/download/immo-scanner-linux
+chmod +x immo-scanner-linux
+
+# Create config
+curl -LO https://raw.githubusercontent.com/mattow02/immo-scanner/main/.env.example
+mv .env.example .env
+nano .env  # edit your preferences
+
+# Run
+./immo-scanner-linux
+```
+
+### Option 2: Install from source
 
 ```bash
 git clone https://github.com/mattow02/immo-scanner.git
@@ -80,52 +117,83 @@ python3 -m venv venv
 source venv/bin/activate
 
 pip install -e .
+
+cp .env.example .env
+nano .env
+
+immo-scanner
+```
+
+### Optional: enable browser-based scrapers
+
+LeBonCoin and SeLoger work out of the box. For Laforet, Orpi, and Figaro (browser-based), also run:
+
+```bash
+pip install playwright playwright-stealth
 playwright install chromium
 ```
 
-### 2. Configure
+---
 
-```bash
-cp .env.example .env
+## How It Works
+
+```
+ You run immo-scanner
+        |
+        v
+ +-----------------+     +-----------------+     +------------------+
+ | Scrape listings |---->| Score & rank    |---->| Export Excel      |
+ | from 7 sites    |     | by yield, price |     | 3 tabs, links,   |
+ | (API + browser) |     | demand, type... |     | colors, stats    |
+ +-----------------+     +-----------------+     +------------------+
+        |
+  Filters out:
+  - Viager (life annuities)
+  - Managed residences / EHPAD
+  - Caves, parkings, garages
+  - Suspicious price/m² anomalies
+  - Duplicates across sites
 ```
 
-Edit `.env` to set your target cities, budget, and preferences:
-
-```env
-IMMO_CITIES=Lyon,Bordeaux,Toulouse
-IMMO_BUDGET_MIN=30000
-IMMO_BUDGET_MAX=200000
-IMMO_MIN_YIELD=5.0
-IMMO_SITES=leboncoin,seloger,bienici
-```
-
-### 3. Scan
-
-```bash
-# Use .env defaults
-immo-scanner scan
-
-# Override on the fly
-immo-scanner scan --city Strasbourg --budget-max 100000 --min-yield 7
-
-# Multiple cities
-immo-scanner scan --city Lyon --city Marseille --city Bordeaux
-
-# Specific site only
-immo-scanner scan --sites leboncoin --city Paris --max-pages 3
-```
+---
 
 ## Usage
 
-### Commands
+### Interactive mode (default)
 
-```bash
-immo-scanner scan       # Run a full scan
-immo-scanner config     # Show active configuration
-immo-scanner sites      # List available scraper sites
+Just run `immo-scanner` with no arguments. A step-by-step wizard guides you through:
+
+```
+Step 1/6 — Target cities
+Step 2/6 — Budget range
+Step 3/6 — Property types
+Step 4/6 — Listing sites
+Step 5/6 — Yield & options
+Step 6/6 — Summary → Start scan? [Y/n]
 ```
 
-### Scan Options
+### Command-line mode
+
+For scripting or quick runs, use flags directly:
+
+```bash
+# Single city
+immo-scanner scan --city Lyon --budget-max 150000 --min-yield 7
+
+# Multiple cities
+immo-scanner scan --city Paris --city Marseille --city Bordeaux
+
+# Specific site, no Excel
+immo-scanner scan --sites leboncoin --city Strasbourg --max-pages 3 --no-excel
+
+# Show config
+immo-scanner config
+
+# List available sites
+immo-scanner sites
+```
+
+### All flags
 
 | Flag | Description | Example |
 |------|-------------|---------|
@@ -133,150 +201,189 @@ immo-scanner sites      # List available scraper sites
 | `--department` | Department code (repeatable) | `--department 69` |
 | `--budget-min` | Minimum price (EUR) | `--budget-min 50000` |
 | `--budget-max` | Maximum price (EUR) | `--budget-max 150000` |
-| `--surface-min` | Minimum area (m²) | `--surface-min 20` |
-| `--surface-max` | Maximum area (m²) | `--surface-max 80` |
-| `--types` | Property types (comma-separated) | `--types apartment,house` |
+| `--surface-min` | Minimum area (m2) | `--surface-min 20` |
+| `--surface-max` | Maximum area (m2) | `--surface-max 80` |
+| `--types` | Property types | `--types apartment,house` |
 | `--min-yield` | Minimum gross yield (%) | `--min-yield 6` |
-| `--sites` | Sites to scrape (comma-separated) | `--sites leboncoin,seloger` |
+| `--sites` | Sites to scrape | `--sites leboncoin,seloger` |
 | `--max-pages` | Max pages per site per city | `--max-pages 3` |
 | `--rental-mode` | Rent estimation mode | `--rental-mode avg_price` |
 | `-o, --output` | Output directory for Excel | `-o ./results` |
 | `--no-excel` | Terminal display only | `--no-excel` |
 | `-v, --verbose` | Verbose logging | |
 
-### Rental Estimation Modes
+---
 
-| Mode | Description |
-|------|-------------|
-| `avg_price` | Uses built-in rent/m² averages for 50+ French cities. Fast, no extra requests. |
-| `cross_ref` | Scrapes rental listings on the same sites to estimate real market rent. Slower but more accurate. |
-| `both` | Uses `avg_price` as baseline, enriched with `cross_ref` data when available. **(default)** |
+## Configuration
 
-## Scoring System
-
-Each property receives a score from 0 to 100 based on weighted criteria:
-
-| Criterion | Weight | Description |
-|-----------|--------|-------------|
-| **Gross yield** | 40% | `(annual rent / purchase price) × 100` — higher is better |
-| **Price/m² vs. city avg** | 15% | Below-average price per m² = good deal |
-| **Rental demand** | 15% | Local supply/demand tension index |
-| **Property type** | 10% | Studios & 2-room flats score higher (easier to rent) |
-| **Size coherence** | 10% | Area must match room count (no 50m² studio) |
-| **Listing freshness** | 10% | Recent listings score higher |
-
-### Yield Calculation
-
-```
-Gross yield  = (estimated monthly rent × 12) / purchase price × 100
-
-Net yield    = ((annual rent) - (property tax + condo fees + 1 month vacancy)) / purchase price × 100
-```
-
-## Excel Output
-
-The generated `.xlsx` file contains 3 tabs:
-
-### Ranking
-Sorted by score. Columns: rank, score, city, type, area, price, estimated rent, gross yield, net yield, price/m², link, source.
-
-### Details
-All columns above plus: description, rooms, floor, year built, energy rating (DPE), charges, coordinates, posting date, score breakdown.
-
-### Statistics
-Summary: total properties, average/median yield, best yield, top cities, breakdown by source.
-
-Conditional formatting: green (yield ≥ 8%), orange (5–8%), red (< 5%). Links are clickable.
-
-## Auto-Filtering
-
-The following listing types are automatically excluded:
-
-- **Life annuities** — viager, bouquet, rente viagère, occupé à vie
-- **Managed residences** — résidence senior, résidence gérée, résidence étudiante, résidence de services
-- **Healthcare** — EHPAD
-- **Managed LMNP** — LMNP géré
-- **Commercial** — bail commercial, droit au bail, murs commerciaux
-
-## Configuration Reference
-
-All settings can be defined in `.env` (see [`.env.example`](.env.example)):
+All settings live in a `.env` file. Copy `.env.example` to `.env` and edit:
 
 ```env
-# Search zone
+# === SEARCH ===
 IMMO_CITIES=Lyon,Marseille,Bordeaux      # Target cities
-IMMO_DEPARTMENTS=                         # Or by department code (69,13,33)
-IMMO_RADIUS_KM=20                         # Radius around each city
-
-# Filters
-IMMO_BUDGET_MIN=30000                     # Min purchase price
-IMMO_BUDGET_MAX=200000                    # Max purchase price
-IMMO_SURFACE_MIN=15                       # Min area (m²)
-IMMO_SURFACE_MAX=                         # Max area (empty = no limit)
+IMMO_BUDGET_MIN=30000                     # Min price (EUR)
+IMMO_BUDGET_MAX=200000                    # Max price (EUR)
+IMMO_SURFACE_MIN=15                       # Min area (m2)
 IMMO_TYPES=apartment,house,building       # Property types
-IMMO_ROOMS_MIN=                           # Min rooms
-IMMO_ROOMS_MAX=                           # Max rooms
 
-# Rental estimation
+# === YIELD ===
 IMMO_RENTAL_MODE=both                     # avg_price | cross_ref | both
-IMMO_MIN_YIELD=5.0                        # Min gross yield to appear in results
+IMMO_MIN_YIELD=5.0                        # Min gross yield (%)
 
-# Scraping
-IMMO_SITES=leboncoin,seloger,bienici      # Sites to scrape
+# === SCRAPING ===
+IMMO_SITES=leboncoin,seloger              # Sites to use
 IMMO_MAX_PAGES=3                          # Pages per site per city
 IMMO_DELAY_MIN=2                          # Min delay between requests (sec)
 IMMO_DELAY_MAX=5                          # Max delay between requests (sec)
-IMMO_TIMEOUT=15                           # Request timeout (sec)
 
-# Export
-IMMO_OUTPUT_DIR=./output                  # Output folder
-IMMO_EXCEL_NAME=resultats_immo            # Excel filename (without .xlsx)
+# === OUTPUT ===
+IMMO_OUTPUT_DIR=./output                  # Excel output folder
+IMMO_EXCEL_NAME=resultats_immo            # Excel filename prefix
 ```
 
-## Project Structure
+### Rental estimation modes
+
+| Mode | Speed | Accuracy | Description |
+|------|-------|----------|-------------|
+| `avg_price` | Fast | Medium | Built-in rent/m2 database for 50+ French cities |
+| `cross_ref` | Slow | High | Scrapes actual rental listings to estimate real market rent |
+| `both` | Medium | Best | Combines both methods **(default)** |
+
+---
+
+## Scoring System
+
+Each property gets a score from 0 to 100:
+
+| Criterion | Weight | What it measures |
+|-----------|--------|------------------|
+| **Gross yield** | 40% | `(monthly rent x 12) / price x 100` |
+| **Price/m2 vs city avg** | 15% | Below average = good deal |
+| **Rental demand** | 15% | Local supply/demand tension |
+| **Property type** | 10% | Studios & T2 score higher (easier to rent) |
+| **Size coherence** | 10% | Area must match room count |
+| **Listing freshness** | 10% | Recent listings score higher |
+
+### Yield formulas
+
+```
+Gross yield = (monthly rent x 12) / purchase price x 100
+
+Net yield   = (annual rent - tax - fees - 1 month vacancy) / purchase price x 100
+```
+
+---
+
+## Excel Output
+
+The `.xlsx` file has 3 tabs:
+
+| Tab | Content |
+|-----|---------|
+| **Ranking** | Properties sorted by score. Columns: rank, score, city, type, area, price, rent, yield, price/m2, link |
+| **Details** | All data: description, rooms, floor, DPE, charges, GPS coords, score breakdown |
+| **Statistics** | Summary: total count, avg/median yield, top cities, source breakdown |
+
+Color coding: green (yield >= 8%), orange (5-8%), red (< 5%). All listing links are clickable.
+
+---
+
+## Auto-Filtering
+
+These listings are automatically excluded:
+
+| Category | Keywords detected |
+|----------|-------------------|
+| Life annuities | viager, bouquet, rente viagere, occupe a vie |
+| Managed residences | residence senior, geree, etudiante, services |
+| Healthcare | EHPAD |
+| Commercial | bail commercial, local commercial, murs commerciaux |
+| Non-housing | caves a vendre, parking a vendre, box, garage a vendre |
+| Price anomalies | Price/m2 below 30% of city average |
+
+---
+
+## Supported Sites
+
+| Site | Method | Needs Playwright? | Status |
+|------|--------|-------------------|--------|
+| **LeBonCoin** | JSON API + TLS impersonation | No | Fully working |
+| **SeLoger** | HTML + TLS impersonation | No | Fully working |
+| **Bien'ici** | Browser rendering | Yes | Working |
+| **Laforet** | Browser rendering | Yes | Working |
+| **Orpi** | Browser rendering | Yes | Working |
+| **Figaro Immo** | Browser rendering | Yes | Working |
+| **PAP** | Browser rendering | Yes | Partial |
+
+> LeBonCoin and SeLoger work everywhere (standalone exe, Windows, Linux). The browser-based sites require Playwright to be installed separately.
+
+---
+
+## How Anti-Bot Bypass Works
+
+French real estate sites use **DataDome** bot protection. This tool bypasses it with two methods:
+
+**1. TLS Fingerprinting** (LeBonCoin, SeLoger)
+
+DataDome checks the TLS handshake signature (JA3/JA4 hash). Normal Python HTTP libraries have a different fingerprint than real browsers and get blocked. `curl_cffi` impersonates Chrome's exact TLS fingerprint, making requests look identical to a real browser. No captcha needed.
+
+**2. Headless Browser** (Bien'ici, Laforet, Orpi)
+
+A real Chromium browser runs in headless mode with `playwright-stealth` patches that hide automation signals (`navigator.webdriver`, WebGL fingerprint, etc).
+
+---
+
+## Build From Source
+
+### Build the executable yourself
+
+**Linux:**
+```bash
+source venv/bin/activate
+pip install pyinstaller
+python build.py
+# Output: dist/immo-scanner
+```
+
+**Windows:**
+```
+Double-click build-windows.bat
+```
+Or manually:
+```powershell
+venv\Scripts\activate
+pip install pyinstaller
+python build.py
+# Output: dist\immo-scanner.exe
+```
+
+### Project structure
 
 ```
 immo-scanner/
 ├── immo_scanner/
-│   ├── cli.py              # CLI entry point (Click)
+│   ├── cli.py              # CLI + interactive wizard
 │   ├── config.py            # .env loader
-│   ├── models.py            # Data models (Property, ScoredProperty)
+│   ├── models.py            # Data models
 │   ├── engine.py            # Main orchestrator
-│   ├── scorer.py            # Yield calculation & multi-criteria scoring
+│   ├── scorer.py            # Yield + scoring + anomaly filter
 │   ├── dedup.py             # Cross-site deduplication
-│   ├── display.py           # Rich terminal output
-│   ├── export.py            # Excel generation (openpyxl)
-│   ├── scrapers/
-│   │   ├── base.py          # Abstract scraper + auto-filtering
-│   │   ├── leboncoin.py     # LeBonCoin (API + curl_cffi)
-│   │   ├── seloger.py       # SeLoger (HTML + curl_cffi)
-│   │   ├── bienici.py       # Bien'ici (Playwright)
-│   │   ├── laforet.py       # Laforet (Playwright)
-│   │   ├── orpi.py          # Orpi (Playwright)
-│   │   ├── figaro.py        # Figaro Immo (Playwright)
-│   │   └── pap.py           # PAP (Playwright)
-│   └── utils/
-│       ├── browser.py       # Playwright + stealth wrapper
-│       ├── http.py          # HTTP client (retry, rate limit)
-│       ├── geo.py           # City/postal code mapping
-│       └── rental_refs.py   # Rent averages & rental demand data
-├── .env.example
-├── requirements.txt
-├── setup.py
+│   ├── display.py           # Terminal output (Rich)
+│   ├── export.py            # Excel export (openpyxl)
+│   ├── scrapers/            # One file per site
+│   └── utils/               # HTTP, browser, geo data, rent data
+├── build.py                 # PyInstaller build script
+├── build-windows.bat        # Windows build (double-click)
+├── setup-and-run.bat        # Windows quick start (double-click)
+├── .env.example             # Config template
 └── README.md
 ```
 
-## How Anti-Bot Bypass Works
-
-Most French real estate sites use **DataDome** or **Cloudflare** bot protection. This tool uses two strategies:
-
-1. **TLS Fingerprinting** (`curl_cffi`) — LeBonCoin and SeLoger detect bots by comparing the TLS handshake signature (JA3/JA4 hash) against known browser fingerprints. `curl_cffi` impersonates Chrome's exact TLS fingerprint, making requests indistinguishable from a real browser. No captcha solving needed.
-
-2. **Headless Browser** (`Playwright + stealth`) — For JS-rendered sites (Bien'ici, Laforet, Orpi), a headless Chromium browser with stealth patches renders the page like a real user.
+---
 
 ## Disclaimer
 
-This tool is for **personal use and educational purposes only**. Scraping may violate the terms of service of some websites. Use responsibly, respect rate limits, and do not use for commercial purposes without authorization. The authors are not responsible for any misuse.
+This tool is for **personal use and educational purposes only**. Scraping may violate the terms of service of some websites. Use responsibly, respect rate limits, and do not use for commercial purposes without authorization.
 
 ## License
 
