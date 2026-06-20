@@ -68,6 +68,14 @@ class BaseScraper(ABC):
         re.IGNORECASE,
     )
 
+    EXCLUDED_NOT_HOUSING = re.compile(
+        r"caves?\s+[àa]\s+vendre|lot\s+de\s+caves?|ensemble\s+de\s+caves?|"
+        r"parking\s+[àa]\s+vendre|place\s+de\s+parking|box\s+[àa]\s+vendre|"
+        r"garage\s+[àa]\s+vendre|local\s+commercial|terrain\s+nu|"
+        r"^parking\b|^garage\b|^cave\b|^box\b|^local\b",
+        re.IGNORECASE,
+    )
+
     def _filter_result(self, prop: Property, criteria: SearchCriteria) -> bool:
         if criteria.budget_min and prop.price < criteria.budget_min:
             return False
@@ -79,7 +87,10 @@ class BaseScraper(ABC):
             return False
         searchable = f"{prop.title} {prop.description}"
         if self.EXCLUDED_KEYWORDS.search(searchable):
-            logger.debug(f"[{self.name}] Exclu (viager/residence geree): {prop.title[:60]}")
+            logger.debug(f"[{self.name}] Excluded (viager/managed): {prop.title[:60]}")
+            return False
+        if self.EXCLUDED_NOT_HOUSING.search(searchable):
+            logger.debug(f"[{self.name}] Excluded (not housing): {prop.title[:60]}")
             return False
         return True
 
