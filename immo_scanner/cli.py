@@ -1,3 +1,12 @@
+import os
+import sys
+
+# When frozen by PyInstaller, look for the bundled chromium inside the app
+# package instead of the per-user ms-playwright cache (which the exe user does
+# not have). Must be set before Playwright is imported or launched.
+if getattr(sys, "frozen", False):
+    os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "0")
+
 import logging
 import click
 from rich.console import Console
@@ -300,6 +309,30 @@ def sites():
         table.add_row(key, label, "Active")
 
     console.print(table)
+
+
+@main.command()
+def doctor():
+    """Health check: verify the bundled browser (Playwright/chromium) works."""
+    from immo_scanner.utils.browser import BrowserClient, PLAYWRIGHT_AVAILABLE
+
+    console.print("[bold blue]═══ Immo-Scanner doctor ═══[/bold blue]\n")
+    if not PLAYWRIGHT_AVAILABLE:
+        console.print("[red]FAIL[/red] Playwright is not available in this build.")
+        sys.exit(1)
+    try:
+        with BrowserClient(headless=True, delay_min=0, delay_max=0) as browser:
+            page = browser.new_page("about:blank")
+            if page is None:
+                console.print("[red]FAIL[/red] Could not open a browser page.")
+                sys.exit(1)
+            page.close()
+        console.print("[green]OK[/green] Playwright + chromium launched successfully.")
+    except SystemExit:
+        raise
+    except Exception as exc:
+        console.print(f"[red]FAIL[/red] Browser failed to launch: {exc}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
