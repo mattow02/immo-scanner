@@ -323,6 +323,20 @@ Color coding: green (yield >= 8%), orange (5-8%), red (< 5%).
 
 ---
 
+## Tests
+
+The scoring core is pure logic: rent estimation, yield, ranking and
+deduplication import nothing from the network, the browser, or any third-party
+package. That is what makes them testable in isolation, and they are:
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests -q          # 19 tests, ~0.03s
+```
+
+They run on every push in
+[continuous integration](.github/workflows/verification.yml).
+
 ## Build From Source
 
 **Linux:**

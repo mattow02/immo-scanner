@@ -323,6 +323,20 @@ Code couleur : vert (rendement >= 8%), orange (5-8%), rouge (< 5%).
 
 ---
 
+## Tests
+
+Le cœur du calcul est de la logique pure : l'estimation du loyer, le rendement,
+le classement et la déduplication n'importent rien du réseau, du navigateur ni
+d'un paquet tiers. C'est ce qui les rend testables isolément, et ils le sont :
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests -q          # 19 tests, ~0,03 s
+```
+
+Ils tournent à chaque envoi dans
+[l'intégration continue](.github/workflows/verification.yml).
+
 ## Compiler depuis les sources
 
 **Linux :**
