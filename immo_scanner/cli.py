@@ -43,13 +43,13 @@ MAJOR_CITIES = [
 
 
 def _header(step: int, total: int, title: str):
-    console.print(f"\n[bold blue]Step {step}/{total}[/bold blue] — [bold]{title}[/bold]")
+    console.print(f"\n[bold blue]Step {step}/{total}[/bold blue] : [bold]{title}[/bold]")
     console.print("[dim]" + "─" * 50 + "[/dim]")
 
 
 def _interactive_scan():
     console.print(BANNER)
-    console.print(Panel("[bold]Interactive mode[/bold] — answer each step to configure your scan.", border_style="blue"))
+    console.print(Panel("[bold]Interactive mode[/bold] : answer each step to configure your scan.", border_style="blue"))
     total_steps = 6
 
     # Step 1: Cities
@@ -94,7 +94,7 @@ def _interactive_scan():
     _header(2, total_steps, "Budget range")
     budget_min = IntPrompt.ask("[bold]Minimum price (EUR)[/bold]", default=30000)
     budget_max = IntPrompt.ask("[bold]Maximum price (EUR)[/bold]", default=200000)
-    console.print(f"[green]Budget:[/green] {budget_min:,} EUR — {budget_max:,} EUR")
+    console.print(f"[green]Budget:[/green] {budget_min:,} EUR : {budget_max:,} EUR")
 
     # Step 3: Property type
     _header(3, total_steps, "Property types")
@@ -128,7 +128,7 @@ def _interactive_scan():
     for i, (key, label) in enumerate(ALL_SITES.items(), 1):
         console.print(f"  [cyan]{i}.[/cyan] {label}")
     console.print(f"  [cyan]0.[/cyan] All sites")
-    console.print(f"  [cyan]R.[/cyan] Recommended (LeBonCoin + SeLoger) [dim]— fastest[/dim]")
+    console.print(f"  [cyan]R.[/cyan] Recommended (LeBonCoin + SeLoger) [dim](fastest)[/dim]")
 
     site_input = Prompt.ask("[bold]Select sites[/bold]", default="R")
     selected_sites = []
@@ -166,7 +166,7 @@ def _interactive_scan():
     summary.add_column(style="bold", width=18)
     summary.add_column()
     summary.add_row("Cities", f"{len(cities)} cities" if len(cities) > 5 else ", ".join(cities))
-    summary.add_row("Budget", f"{budget_min:,} — {budget_max:,} EUR")
+    summary.add_row("Budget", f"{budget_min:,} : {budget_max:,} EUR")
     summary.add_row("Types", ", ".join(PROPERTY_TYPES[t] for t in prop_types))
     summary.add_row("Sites", ", ".join(selected_sites))
     summary.add_row("Min yield", f"{min_yield}%")
@@ -209,7 +209,7 @@ def _interactive_scan():
 @click.option("-v", "--verbose", is_flag=True, help="Verbose logging")
 @click.pass_context
 def main(ctx, verbose):
-    """Immo-Scanner — Find the best rental investment properties in France."""
+    """Immo-Scanner : Find the best rental investment properties in France."""
     level = logging.DEBUG if verbose else logging.INFO
     logging.basicConfig(
         level=level,

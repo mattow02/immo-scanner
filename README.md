@@ -36,7 +36,7 @@ Scans 7 major listing sites, estimates rental yield, scores each property, and e
 ### Install Python (required for all setups except pre-built binary)
 
 <details>
-<summary><strong>Windows — Step by step</strong></summary>
+<summary><strong>Windows, step by step</strong></summary>
 
 1. Go to **https://www.python.org/downloads/**
 2. Click the big yellow **"Download Python 3.12.x"** button
@@ -92,7 +92,7 @@ python3 --version
    - First run: installs everything, opens `.env` in Notepad for you to configure
    - Next runs: launches the interactive scanner directly
 
-3. **Follow the prompts** — pick cities, budget, sites, done.
+3. **Follow the prompts**: pick cities, budget, sites, done.
 
 The Excel report is saved in the `output/` folder.
 
@@ -206,12 +206,12 @@ playwright install chromium
 Run `immo-scanner` with no arguments:
 
 ```
-Step 1/6 — Target cities
-Step 2/6 — Budget range
-Step 3/6 — Property types
-Step 4/6 — Listing sites
-Step 5/6 — Yield & options
-Step 6/6 — Summary → Start scan? [Y/n]
+Step 1/6: Target cities
+Step 2/6: Budget range
+Step 3/6: Property types
+Step 4/6: Listing sites
+Step 5/6: Yield & options
+Step 6/6: Summary → Start scan? [Y/n]
 ```
 
 ### Command-line mode
@@ -317,9 +317,9 @@ Color coding: green (yield >= 8%), orange (5-8%), red (< 5%).
 
 ## How Anti-Bot Bypass Works
 
-**1. TLS Fingerprinting** (LeBonCoin, SeLoger) — `curl_cffi` impersonates Chrome's TLS handshake signature. DataDome can't tell the difference. No captcha needed.
+**1. TLS Fingerprinting** (LeBonCoin, SeLoger) : `curl_cffi` impersonates Chrome's TLS handshake signature. DataDome can't tell the difference. No captcha needed.
 
-**2. Headless Browser** (Bien'ici, Laforet, Orpi) — Real Chromium with `playwright-stealth` patches.
+**2. Headless Browser** (Bien'ici, Laforet, Orpi) : Real Chromium with `playwright-stealth` patches.
 
 ---
 

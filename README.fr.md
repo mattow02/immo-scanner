@@ -36,7 +36,7 @@ Scanne 7 sites d'annonces, estime le rendement locatif, note chaque bien, et exp
 > Python est necessaire pour toutes les installations sauf le binaire pre-compile Linux.
 
 <details>
-<summary><strong>Windows — Etape par etape</strong></summary>
+<summary><strong>Windows, etape par etape</strong></summary>
 
 1. Allez sur **https://www.python.org/downloads/**
 2. Cliquez sur le gros bouton jaune **"Download Python 3.12.x"**
@@ -92,7 +92,7 @@ python3 --version
    - Premier lancement : installe tout automatiquement, ouvre `.env` dans le Bloc-notes pour configurer
    - Lancements suivants : lance directement le scanner interactif
 
-3. **Suivez les etapes** — choisissez vos villes, budget, sites, c'est parti.
+3. **Suivez les etapes** : choisissez vos villes, budget, sites, c'est parti.
 
 Le rapport Excel est sauvegarde dans le dossier `output/`.
 
@@ -206,12 +206,12 @@ playwright install chromium
 Lancez `immo-scanner` sans arguments :
 
 ```
-Etape 1/6 — Villes cibles
-Etape 2/6 — Fourchette de budget
-Etape 3/6 — Types de biens
-Etape 4/6 — Sites d'annonces
-Etape 5/6 — Rendement et options
-Etape 6/6 — Resume → Lancer le scan ? [O/n]
+Etape 1/6: Villes cibles
+Etape 2/6: Fourchette de budget
+Etape 3/6: Types de biens
+Etape 4/6: Sites d'annonces
+Etape 5/6: Rendement et options
+Etape 6/6: Resume → Lancer le scan ? [O/n]
 ```
 
 ### Mode ligne de commande
@@ -317,9 +317,9 @@ Code couleur : vert (rendement >= 8%), orange (5-8%), rouge (< 5%).
 
 ## Contournement anti-bot
 
-**1. Empreinte TLS** (LeBonCoin, SeLoger) — `curl_cffi` imite l'empreinte TLS exacte de Chrome. DataDome ne fait pas la difference. Pas de captcha.
+**1. Empreinte TLS** (LeBonCoin, SeLoger) : `curl_cffi` imite l'empreinte TLS exacte de Chrome. DataDome ne fait pas la difference. Pas de captcha.
 
-**2. Navigateur headless** (Bien'ici, Laforet, Orpi) — Vrai Chromium avec les patchs `playwright-stealth`.
+**2. Navigateur headless** (Bien'ici, Laforet, Orpi) : Vrai Chromium avec les patchs `playwright-stealth`.
 
 ---
 
