@@ -1,23 +1,25 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_all
 
 datas = []
+binaries = []
 hiddenimports = ['lxml', 'lxml.etree', 'lxml._elementpath', 'cloudscraper', 'requests_toolbelt', 'charset_normalizer', 'immo_scanner.scrapers.leboncoin', 'immo_scanner.scrapers.seloger', 'immo_scanner.scrapers.bienici', 'immo_scanner.scrapers.pap', 'immo_scanner.scrapers.laforet', 'immo_scanner.scrapers.orpi', 'immo_scanner.scrapers.figaro']
-datas += collect_data_files('fake_useragent')
-datas += collect_data_files('curl_cffi')
-datas += collect_data_files('playwright_stealth')
-datas += collect_data_files('certifi')
-hiddenimports += collect_submodules('fake_useragent')
-hiddenimports += collect_submodules('curl_cffi')
-hiddenimports += collect_submodules('playwright_stealth')
-hiddenimports += collect_submodules('certifi')
+tmp_ret = collect_all('playwright')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('playwright_stealth')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('fake_useragent')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('curl_cffi')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+tmp_ret = collect_all('certifi')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
     ['immo_scanner/cli.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],

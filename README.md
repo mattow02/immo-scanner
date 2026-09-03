@@ -96,14 +96,24 @@ python3 --version
 
 The Excel report is saved in the `output/` folder.
 
-### Option 2: Build a standalone `.exe`
+### Option 2: Standalone `.exe` (no Python needed)
 
-If you want a portable executable that works without Python:
+A single self-contained executable that bundles chromium, so **all sites work**
+(including the browser-based ones) with no Python and no separate browser install.
+
+**Download a pre-built exe:** grab `immo-scanner-windows.exe` from the latest
+[GitHub Actions build](https://github.com/mattow02/immo-scanner/actions) (artifacts),
+or from the [Releases](https://github.com/mattow02/immo-scanner/releases) page.
+
+**Or build it yourself:**
 
 1. **Double-click `build-windows.bat`**
-2. Wait for the build to finish (~2 minutes)
-3. Your executable is at `dist\immo-scanner.exe`
+2. Wait for the build to finish (a few minutes; it downloads chromium the first time)
+3. Your executable is at `dist\immo-scanner.exe` (~350 MB, chromium included)
 4. Copy `immo-scanner.exe` + your `.env` file anywhere and run it
+
+> First launch takes a few extra seconds while it unpacks the bundled browser.
+> Run `immo-scanner.exe doctor` once to confirm the browser works.
 
 ### Option 3: Manual install (PowerShell / CMD)
 
@@ -342,17 +352,19 @@ They run on every push in
 **Linux:**
 ```bash
 source venv/bin/activate
-pip install pyinstaller
+pip install -r requirements-build.txt
+PLAYWRIGHT_BROWSERS_PATH=0 python -m playwright install chromium
 python build.py
-# Output: dist/immo-scanner
+# Output: dist/immo-scanner (chromium bundled; needs system libs on the target)
 ```
 
 **Windows:** double-click `build-windows.bat`, or:
 ```powershell
 venv\Scripts\activate
-pip install pyinstaller
+pip install -r requirements-build.txt
+$env:PLAYWRIGHT_BROWSERS_PATH = "0"; python -m playwright install chromium
 python build.py
-# Output: dist\immo-scanner.exe
+# Output: dist\immo-scanner.exe (chromium bundled)
 ```
 
 ---
